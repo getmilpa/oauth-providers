@@ -1,8 +1,18 @@
+<p align="center">
+  <a href="https://github.com/getmilpa">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/getmilpa/core/main/art/lockup/milpa-lockup-v-color-dark.svg">
+      <img src="https://raw.githubusercontent.com/getmilpa/core/main/art/lockup/milpa-lockup-v-color-light.svg" alt="Milpa" width="300">
+    </picture>
+  </a>
+</p>
+
 # Milpa OAuth Providers
 
 > **Seven zero-dependency OAuth 2.0 / social-login providers** for the Milpa PHP framework — Google, GitHub, GitLab, Facebook, Apple, Twitch, and the Telegram Login Widget. Pure protocol: build the authorization URL, exchange the code, get back a typed, immutable `UserInfo` DTO. No storage, no sessions, no framework coupling — bring your own.
 
 [![CI](https://github.com/getmilpa/oauth-providers/actions/workflows/ci.yml/badge.svg)](https://github.com/getmilpa/oauth-providers/actions/workflows/ci.yml)
+[![Packagist](https://img.shields.io/packagist/v/milpa/oauth-providers.svg)](https://packagist.org/packages/milpa/oauth-providers)
 [![PHP](https://img.shields.io/badge/php-%E2%89%A5%208.3-777bb4.svg)](https://www.php.net/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Docs](https://img.shields.io/badge/docs-API%20reference-blue.svg)](https://getmilpa.github.io/oauth-providers/)
@@ -169,8 +179,8 @@ issues via [SECURITY.md](SECURITY.md), and note that this project follows a
 
 ## License
 
-[Apache-2.0](LICENSE) © the Milpa authors.
+[Apache-2.0](LICENSE) © TeamX Agency.
 
 ---
 
-Milpa is designed, built, and maintained by **[TeamX Agency](https://teamx.agency)**.
+Milpa is designed, built, and maintained by **[TeamX Agency](https://teamx.agency/?utm_source=github&utm_medium=readme&utm_campaign=milpa&utm_content=oauth-providers)**.

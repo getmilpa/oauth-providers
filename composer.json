@@ -3,6 +3,12 @@
   "description": "OAuth 2.0 / social-login provider protocol layer for the Milpa PHP framework: Google, GitHub, GitLab, Facebook, Apple, Twitch and the Telegram Login Widget \u2014 typed contracts, curl-based providers, immutable UserInfo DTOs.",
   "type": "library",
   "license": "Apache-2.0",
+  "authors": [
+    {
+      "name": "Rodrigo Vicente - TeamX Agency",
+      "homepage": "https://teamx.agency"
+    }
+  ],
   "require": {
     "php": ">=8.3"
   },

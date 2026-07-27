@@ -17,6 +17,8 @@ namespace Milpa\OAuth\Providers;
 
 use Milpa\OAuth\DTO\AppleUserInfo;
 use Milpa\OAuth\Contracts\AppleOAuthServiceInterface;
+use Milpa\OAuth\Http\CurlTransport;
+use Milpa\OAuth\Http\HttpTransportInterface;
 
 /**
  * Apple Sign In OAuth 2.0 protocol implementation.
@@ -38,12 +40,16 @@ class AppleOAuthService implements AppleOAuthServiceInterface
     private const AUTH_ENDPOINT = 'https://appleid.apple.com/auth/authorize';
     private const TOKEN_ENDPOINT = 'https://appleid.apple.com/auth/token';
 
+    private readonly HttpTransportInterface $http;
+
     public function __construct(
         private readonly string $clientId,
         private readonly string $teamId,
         private readonly string $keyId,
-        private readonly string $privateKey
+        private readonly string $privateKey,
+        ?HttpTransportInterface $transport = null,
     ) {
+        $this->http = $transport ?? new CurlTransport();
     }
 
     /**
@@ -141,25 +147,19 @@ class AppleOAuthService implements AppleOAuthServiceInterface
      */
     private function fetchToken(string $code, string $redirectUri, string $clientSecret): array
     {
-        $ch = curl_init(self::TOKEN_ENDPOINT);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => http_build_query([
-                'code' => $code,
-                'client_id' => $this->clientId,
-                'client_secret' => $clientSecret,
-                'redirect_uri' => $redirectUri,
-                'grant_type' => 'authorization_code',
-            ]),
-        ]);
+        ['status' => $httpCode, 'body' => $response] = $this->http->post(
+            self::TOKEN_ENDPOINT,
+            [
+                    'code' => $code,
+                    'client_id' => $this->clientId,
+                    'client_secret' => $clientSecret,
+                    'redirect_uri' => $redirectUri,
+                    'grant_type' => 'authorization_code',
+            ],
+        );
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($httpCode !== 200 || $response === false) {
-            throw new \RuntimeException('Apple token exchange failed: ' . ($response ?: 'no response'));
+        if ($httpCode !== 200) {
+            throw new \RuntimeException('Apple token exchange failed: ' . ($response !== '' ? $response : 'no response'));
         }
 
         /** @var array{access_token?: string, id_token?: string, error?: string}|null $data */

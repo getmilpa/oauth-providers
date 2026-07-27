@@ -17,6 +17,8 @@ namespace Milpa\OAuth\Providers;
 
 use Milpa\OAuth\DTO\GoogleUserInfo;
 use Milpa\OAuth\Contracts\GoogleOAuthServiceInterface;
+use Milpa\OAuth\Http\CurlTransport;
+use Milpa\OAuth\Http\HttpTransportInterface;
 
 /**
  * Google OAuth 2.0 protocol implementation.
@@ -30,10 +32,14 @@ class GoogleOAuthService implements GoogleOAuthServiceInterface
     private const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
     private const USERINFO_ENDPOINT = 'https://www.googleapis.com/oauth2/v2/userinfo';
 
+    private readonly HttpTransportInterface $http;
+
     public function __construct(
         private readonly string $clientId,
-        private readonly string $clientSecret
+        private readonly string $clientSecret,
+        ?HttpTransportInterface $transport = null,
     ) {
+        $this->http = $transport ?? new CurlTransport();
     }
 
     /**
@@ -84,25 +90,19 @@ class GoogleOAuthService implements GoogleOAuthServiceInterface
      */
     private function fetchToken(string $code, string $redirectUri): array
     {
-        $ch = curl_init(self::TOKEN_ENDPOINT);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => http_build_query([
-                'code' => $code,
-                'client_id' => $this->clientId,
-                'client_secret' => $this->clientSecret,
-                'redirect_uri' => $redirectUri,
-                'grant_type' => 'authorization_code',
-            ]),
-        ]);
+        ['status' => $httpCode, 'body' => $response] = $this->http->post(
+            self::TOKEN_ENDPOINT,
+            [
+                    'code' => $code,
+                    'client_id' => $this->clientId,
+                    'client_secret' => $this->clientSecret,
+                    'redirect_uri' => $redirectUri,
+                    'grant_type' => 'authorization_code',
+            ],
+        );
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($httpCode !== 200 || $response === false) {
-            throw new \RuntimeException('Google token exchange failed: ' . ($response ?: 'no response'));
+        if ($httpCode !== 200) {
+            throw new \RuntimeException('Google token exchange failed: ' . ($response !== '' ? $response : 'no response'));
         }
 
         /** @var array{access_token?: string}|null $data */
@@ -117,19 +117,11 @@ class GoogleOAuthService implements GoogleOAuthServiceInterface
 
     private function fetchUserInfo(string $accessToken): GoogleUserInfo
     {
-        $ch = curl_init(self::USERINFO_ENDPOINT);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER => [
-                'Authorization: Bearer ' . $accessToken,
-            ],
+        ['status' => $httpCode, 'body' => $response] = $this->http->get(self::USERINFO_ENDPOINT, [
+                    'Authorization: Bearer ' . $accessToken,
         ]);
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($httpCode !== 200 || $response === false) {
+        if ($httpCode !== 200) {
             throw new \RuntimeException('Failed to fetch Google user info');
         }
 

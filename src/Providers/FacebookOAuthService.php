@@ -17,6 +17,8 @@ namespace Milpa\OAuth\Providers;
 
 use Milpa\OAuth\DTO\FacebookUserInfo;
 use Milpa\OAuth\Contracts\FacebookOAuthServiceInterface;
+use Milpa\OAuth\Http\CurlTransport;
+use Milpa\OAuth\Http\HttpTransportInterface;
 
 /**
  * Facebook OAuth 2.0 protocol implementation.
@@ -30,10 +32,14 @@ class FacebookOAuthService implements FacebookOAuthServiceInterface
     private const TOKEN_ENDPOINT = 'https://graph.facebook.com/' . self::API_VERSION . '/oauth/access_token';
     private const USERINFO_ENDPOINT = 'https://graph.facebook.com/' . self::API_VERSION . '/me';
 
+    private readonly HttpTransportInterface $http;
+
     public function __construct(
         private readonly string $appId,
-        private readonly string $appSecret
+        private readonly string $appSecret,
+        ?HttpTransportInterface $transport = null,
     ) {
+        $this->http = $transport ?? new CurlTransport();
     }
 
     /**
@@ -88,17 +94,10 @@ class FacebookOAuthService implements FacebookOAuthServiceInterface
             'redirect_uri' => $redirectUri,
         ]);
 
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-        ]);
+        ['status' => $httpCode, 'body' => $response] = $this->http->get($url);
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($httpCode !== 200 || $response === false) {
-            throw new \RuntimeException('Facebook token exchange failed: ' . ($response ?: 'no response'));
+        if ($httpCode !== 200) {
+            throw new \RuntimeException('Facebook token exchange failed: ' . ($response !== '' ? $response : 'no response'));
         }
 
         /** @var array{access_token?: string, error?: array{message?: string}}|null $data */
@@ -122,16 +121,9 @@ class FacebookOAuthService implements FacebookOAuthServiceInterface
             'access_token' => $accessToken,
         ]);
 
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-        ]);
+        ['status' => $httpCode, 'body' => $response] = $this->http->get($url);
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($httpCode !== 200 || $response === false) {
+        if ($httpCode !== 200) {
             throw new \RuntimeException('Failed to fetch Facebook user info');
         }
 

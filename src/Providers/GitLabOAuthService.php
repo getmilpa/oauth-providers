@@ -17,6 +17,8 @@ namespace Milpa\OAuth\Providers;
 
 use Milpa\OAuth\DTO\GitLabUserInfo;
 use Milpa\OAuth\Contracts\GitLabOAuthServiceInterface;
+use Milpa\OAuth\Http\CurlTransport;
+use Milpa\OAuth\Http\HttpTransportInterface;
 
 /**
  * GitLab OAuth 2.0 protocol implementation.
@@ -31,13 +33,17 @@ class GitLabOAuthService implements GitLabOAuthServiceInterface
 
     private readonly string $instanceUrl;
 
+    private readonly HttpTransportInterface $http;
+
     public function __construct(
         private readonly string $clientId,
         private readonly string $clientSecret,
-        string $instanceUrl = ''
+        string $instanceUrl = '',
+        ?HttpTransportInterface $transport = null,
     ) {
         $url = !empty($instanceUrl) ? $instanceUrl : self::DEFAULT_INSTANCE;
         $this->instanceUrl = rtrim($url, '/');
+        $this->http = $transport ?? new CurlTransport();
     }
 
     /**
@@ -93,25 +99,19 @@ class GitLabOAuthService implements GitLabOAuthServiceInterface
     {
         $tokenEndpoint = $this->instanceUrl . '/oauth/token';
 
-        $ch = curl_init($tokenEndpoint);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => http_build_query([
-                'code' => $code,
-                'client_id' => $this->clientId,
-                'client_secret' => $this->clientSecret,
-                'redirect_uri' => $redirectUri,
-                'grant_type' => 'authorization_code',
-            ]),
-        ]);
+        ['status' => $httpCode, 'body' => $response] = $this->http->post(
+            $tokenEndpoint,
+            [
+                    'code' => $code,
+                    'client_id' => $this->clientId,
+                    'client_secret' => $this->clientSecret,
+                    'redirect_uri' => $redirectUri,
+                    'grant_type' => 'authorization_code',
+            ],
+        );
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($httpCode !== 200 || $response === false) {
-            throw new \RuntimeException('GitLab token exchange failed: ' . ($response ?: 'no response'));
+        if ($httpCode !== 200) {
+            throw new \RuntimeException('GitLab token exchange failed: ' . ($response !== '' ? $response : 'no response'));
         }
 
         /** @var array{access_token?: string, error?: string, error_description?: string}|null $data */
@@ -132,19 +132,11 @@ class GitLabOAuthService implements GitLabOAuthServiceInterface
     {
         $userEndpoint = $this->instanceUrl . '/api/v4/user';
 
-        $ch = curl_init($userEndpoint);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER => [
-                'Authorization: Bearer ' . $accessToken,
-            ],
+        ['status' => $httpCode, 'body' => $response] = $this->http->get($userEndpoint, [
+                    'Authorization: Bearer ' . $accessToken,
         ]);
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($httpCode !== 200 || $response === false) {
+        if ($httpCode !== 200) {
             throw new \RuntimeException('Failed to fetch GitLab user info');
         }
 

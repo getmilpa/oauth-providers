@@ -15,8 +15,10 @@ declare(strict_types=1);
 
 namespace Milpa\OAuth\Providers;
 
-use Milpa\OAuth\DTO\GitHubUserInfo;
 use Milpa\OAuth\Contracts\GitHubOAuthServiceInterface;
+use Milpa\OAuth\DTO\GitHubUserInfo;
+use Milpa\OAuth\Http\CurlTransport;
+use Milpa\OAuth\Http\HttpTransportInterface;
 
 /**
  * GitHub OAuth 2.0 protocol implementation.
@@ -30,10 +32,14 @@ class GitHubOAuthService implements GitHubOAuthServiceInterface
     private const TOKEN_ENDPOINT = 'https://github.com/login/oauth/access_token';
     private const USERINFO_ENDPOINT = 'https://api.github.com/user';
 
+    private readonly HttpTransportInterface $http;
+
     public function __construct(
         private readonly string $clientId,
-        private readonly string $clientSecret
+        private readonly string $clientSecret,
+        ?HttpTransportInterface $transport = null,
     ) {
+        $this->http = $transport ?? new CurlTransport();
     }
 
     /**
@@ -80,27 +86,19 @@ class GitHubOAuthService implements GitHubOAuthServiceInterface
      */
     private function fetchToken(string $code, string $redirectUri): array
     {
-        $ch = curl_init(self::TOKEN_ENDPOINT);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST => true,
-            CURLOPT_HTTPHEADER => [
-                'Accept: application/json',
-            ],
-            CURLOPT_POSTFIELDS => http_build_query([
+        ['status' => $httpCode, 'body' => $response] = $this->http->post(
+            self::TOKEN_ENDPOINT,
+            [
                 'code' => $code,
                 'client_id' => $this->clientId,
                 'client_secret' => $this->clientSecret,
                 'redirect_uri' => $redirectUri,
-            ]),
-        ]);
+            ],
+            ['Accept: application/json'],
+        );
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($httpCode !== 200 || $response === false) {
-            throw new \RuntimeException('GitHub token exchange failed: ' . ($response ?: 'no response'));
+        if ($httpCode !== 200) {
+            throw new \RuntimeException('GitHub token exchange failed: ' . ($response !== '' ? $response : 'no response'));
         }
 
         /** @var array{access_token?: string, error?: string}|null $data */
@@ -119,21 +117,13 @@ class GitHubOAuthService implements GitHubOAuthServiceInterface
 
     private function fetchUserInfo(string $accessToken): GitHubUserInfo
     {
-        $ch = curl_init(self::USERINFO_ENDPOINT);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER => [
-                'Authorization: Bearer ' . $accessToken,
-                'Accept: application/vnd.github+json',
-                'User-Agent: Milpa-OAuthPlugin',
-            ],
+        ['status' => $httpCode, 'body' => $response] = $this->http->get(self::USERINFO_ENDPOINT, [
+            'Authorization: Bearer ' . $accessToken,
+            'Accept: application/vnd.github+json',
+            'User-Agent: Milpa-OAuthPlugin',
         ]);
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($httpCode !== 200 || $response === false) {
+        if ($httpCode !== 200) {
             throw new \RuntimeException('Failed to fetch GitHub user info');
         }
 

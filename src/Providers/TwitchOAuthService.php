@@ -17,6 +17,8 @@ namespace Milpa\OAuth\Providers;
 
 use Milpa\OAuth\DTO\TwitchUserInfo;
 use Milpa\OAuth\Contracts\TwitchOAuthServiceInterface;
+use Milpa\OAuth\Http\CurlTransport;
+use Milpa\OAuth\Http\HttpTransportInterface;
 
 /**
  * Twitch OAuth 2.0 protocol implementation.
@@ -31,10 +33,14 @@ class TwitchOAuthService implements TwitchOAuthServiceInterface
     private const TOKEN_ENDPOINT = 'https://id.twitch.tv/oauth2/token';
     private const USERINFO_ENDPOINT = 'https://api.twitch.tv/helix/users';
 
+    private readonly HttpTransportInterface $http;
+
     public function __construct(
         private readonly string $clientId,
-        private readonly string $clientSecret
+        private readonly string $clientSecret,
+        ?HttpTransportInterface $transport = null,
     ) {
+        $this->http = $transport ?? new CurlTransport();
     }
 
     /**
@@ -82,25 +88,19 @@ class TwitchOAuthService implements TwitchOAuthServiceInterface
      */
     private function fetchToken(string $code, string $redirectUri): array
     {
-        $ch = curl_init(self::TOKEN_ENDPOINT);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => http_build_query([
-                'code' => $code,
-                'client_id' => $this->clientId,
-                'client_secret' => $this->clientSecret,
-                'redirect_uri' => $redirectUri,
-                'grant_type' => 'authorization_code',
-            ]),
-        ]);
+        ['status' => $httpCode, 'body' => $response] = $this->http->post(
+            self::TOKEN_ENDPOINT,
+            [
+                    'code' => $code,
+                    'client_id' => $this->clientId,
+                    'client_secret' => $this->clientSecret,
+                    'redirect_uri' => $redirectUri,
+                    'grant_type' => 'authorization_code',
+            ],
+        );
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($httpCode !== 200 || $response === false) {
-            throw new \RuntimeException('Twitch token exchange failed: ' . ($response ?: 'no response'));
+        if ($httpCode !== 200) {
+            throw new \RuntimeException('Twitch token exchange failed: ' . ($response !== '' ? $response : 'no response'));
         }
 
         /** @var array{access_token?: string, message?: string}|null $data */
@@ -119,20 +119,12 @@ class TwitchOAuthService implements TwitchOAuthServiceInterface
 
     private function fetchUserInfo(string $accessToken): TwitchUserInfo
     {
-        $ch = curl_init(self::USERINFO_ENDPOINT);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER => [
-                'Authorization: Bearer ' . $accessToken,
-                'Client-Id: ' . $this->clientId,
-            ],
+        ['status' => $httpCode, 'body' => $response] = $this->http->get(self::USERINFO_ENDPOINT, [
+                    'Authorization: Bearer ' . $accessToken,
+                    'Client-Id: ' . $this->clientId,
         ]);
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($httpCode !== 200 || $response === false) {
+        if ($httpCode !== 200) {
             throw new \RuntimeException('Failed to fetch Twitch user info');
         }
 

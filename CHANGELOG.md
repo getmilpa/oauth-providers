@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/getmilpa/oauth-providers/compare/v0.1.0...v0.2.0) (2026-08-13)
+
+
+### Features
+
+* transporte HTTP inyectable en los seis proveedores (43.4% -&gt; 95.6%) ([0a68daa](https://github.com/getmilpa/oauth-providers/commit/0a68daa914471778b1de6c44385e84ca47a9a13f))
+
 ## 0.1.0 (2026-07-07)
 
 

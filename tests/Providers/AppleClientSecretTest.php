@@ -62,14 +62,14 @@ final class AppleClientSecretTest extends TestCase
     public function testAnExchangeSignsAClientSecretAndReturnsTheUserBehindTheIdToken(): void
     {
         $http = ScriptedTransport::answering(200, [
-            'id_token' => $this->idToken(['sub' => '001234.abc', 'email' => 'rod@privaterelay.appleid.com']),
+            'id_token' => $this->idToken(['sub' => '001234.abc', 'email' => 'user@privaterelay.appleid.com']),
         ]);
 
         $user = (new AppleOAuthService('com.example.app', 'TEAM123', 'KEY123', $this->privateKey(), $http))
             ->exchangeCode('code-1', self::REDIRECT);
 
         self::assertSame('001234.abc', $user->id);
-        self::assertSame('rod@privaterelay.appleid.com', $user->email);
+        self::assertSame('user@privaterelay.appleid.com', $user->email);
         self::assertNull($user->name, 'Apple only sends the name on the very first authorization.');
     }
 
@@ -191,7 +191,7 @@ final class AppleClientSecretTest extends TestCase
     {
         // `sub` is Apple's stable user id. Without it there is nothing to key
         // an account on, and the next sign-in would look like a new person.
-        $http = ScriptedTransport::answering(200, ['id_token' => $this->idToken(['email' => 'rod@example.test'])]);
+        $http = ScriptedTransport::answering(200, ['id_token' => $this->idToken(['email' => 'user@example.com'])]);
         $service = new AppleOAuthService('com.example.app', 'TEAM123', 'KEY123', $this->privateKey(), $http);
 
         $this->expectException(\RuntimeException::class);

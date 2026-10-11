@@ -42,7 +42,7 @@ final class ExchangeCodeFlowTest extends TestCase
     {
         $http = ScriptedTransport::forFlow(
             ['access_token' => 'gho_abc'],
-            ['id' => 4211, 'login' => 'rod', 'name' => 'Rodrigo', 'email' => 'rod@example.test', 'avatar_url' => 'https://a.test/r.png'],
+            ['id' => 4211, 'login' => 'rod', 'name' => 'Rodrigo', 'email' => 'user@example.com', 'avatar_url' => 'https://a.test/r.png'],
         );
 
         $user = (new GitHubOAuthService('id', 'secret', $http))->exchangeCode('code-1', self::REDIRECT);
@@ -50,7 +50,7 @@ final class ExchangeCodeFlowTest extends TestCase
         self::assertSame('4211', $user->id, 'The numeric id is carried as a string, the way every other provider gives it.');
         self::assertSame('rod', $user->login);
         self::assertSame('Rodrigo', $user->name);
-        self::assertSame('rod@example.test', $user->email);
+        self::assertSame('user@example.com', $user->email);
         self::assertSame('https://a.test/r.png', $user->avatarUrl);
     }
 
@@ -90,13 +90,13 @@ final class ExchangeCodeFlowTest extends TestCase
     {
         $http = ScriptedTransport::forFlow(
             ['access_token' => 'ya29.abc'],
-            ['id' => '11', 'email' => 'rod@example.test', 'name' => 'Rodrigo', 'picture' => 'https://g.test/r.png'],
+            ['id' => '11', 'email' => 'user@example.com', 'name' => 'Rodrigo', 'picture' => 'https://g.test/r.png'],
         );
 
         $user = (new GoogleOAuthService('id', 'secret', $http))->exchangeCode('c', self::REDIRECT);
 
         self::assertSame('11', $user->id);
-        self::assertSame('rod@example.test', $user->email);
+        self::assertSame('user@example.com', $user->email);
         self::assertSame('Rodrigo', $user->name);
         self::assertSame('https://g.test/r.png', $user->picture);
     }
@@ -105,7 +105,7 @@ final class ExchangeCodeFlowTest extends TestCase
     {
         $http = ScriptedTransport::forFlow(
             ['access_token' => 'glpat'],
-            ['id' => 77, 'username' => 'rod', 'name' => 'Rodrigo', 'email' => 'rod@example.test'],
+            ['id' => 77, 'username' => 'rod', 'name' => 'Rodrigo', 'email' => 'user@example.com'],
         );
 
         $user = (new GitLabOAuthService('id', 'secret', '', $http))->exchangeCode('c', self::REDIRECT);
@@ -133,7 +133,7 @@ final class ExchangeCodeFlowTest extends TestCase
         // object would look like an incomplete profile.
         $http = ScriptedTransport::forFlow(
             ['access_token' => 't'],
-            ['data' => [['id' => '9', 'login' => 'rod', 'display_name' => 'Rod', 'email' => 'rod@example.test']]],
+            ['data' => [['id' => '9', 'login' => 'rod', 'display_name' => 'Rod', 'email' => 'user@example.com']]],
         );
 
         $user = (new TwitchOAuthService('id', 'secret', $http))->exchangeCode('c', self::REDIRECT);
@@ -158,7 +158,7 @@ final class ExchangeCodeFlowTest extends TestCase
     {
         $http = ScriptedTransport::forFlow(
             ['access_token' => 't'],
-            ['id' => '5', 'name' => 'Rodrigo', 'email' => 'rod@example.test', 'picture' => ['data' => ['url' => 'https://f.test/r.png']]],
+            ['id' => '5', 'name' => 'Rodrigo', 'email' => 'user@example.com', 'picture' => ['data' => ['url' => 'https://f.test/r.png']]],
         );
 
         $user = (new FacebookOAuthService('id', 'secret', $http))->exchangeCode('c', self::REDIRECT);

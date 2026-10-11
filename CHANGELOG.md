@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/getmilpa/oauth-providers/compare/v0.2.0...v0.2.1) (2026-10-11)
+
+
+### Miscellaneous Chores
+
+* release 0.2.1 ([#8](https://github.com/getmilpa/oauth-providers/issues/8)) ([876a02b](https://github.com/getmilpa/oauth-providers/commit/876a02b9acc42d4c2266aa366ffd8a423eb79655))
+
 ## [0.2.0](https://github.com/getmilpa/oauth-providers/compare/v0.1.0...v0.2.0) (2026-08-13)
 
 
